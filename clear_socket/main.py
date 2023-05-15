@@ -34,7 +34,7 @@ async def handle_client(websocket, path):
 
 
 async def start_server():
-    server = await websockets.serve(handle_client, "0.0.0.0", 8765)
+    server = await websockets.serve(handle_client, "0.0.0.0", 8000)
 
     # Бесконечный цикл для ожидания подключений
     await server.wait_closed()
