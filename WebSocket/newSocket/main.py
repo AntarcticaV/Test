@@ -22,7 +22,7 @@ class ConnectionManager:
             if connection != sender:
                 await connection.send_text(video_frame)
                 current_dateTime = datetime.now()
-                with open("otus.txt", "w") as file:
+                with open("otus.txt", "a+") as file:
                     file.write(f"send:{current_dateTime}\n")
 
 
@@ -36,7 +36,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             current_dateTime = datetime.now()
-            with open("otus.txt", "w") as file:
+            with open("otus.txt", "a+") as file:
                 file.write(f"recv:{current_dateTime}\n")
             await manager.broadcast_video(data, websocket)
     except WebSocketDisconnect:
