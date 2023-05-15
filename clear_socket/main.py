@@ -24,10 +24,14 @@ async def handle_client(websocket, path):
         while True:
             # Получаем видео от клиента
             video = await websocket.recv()
-            print("recv"+datetime.now())
+            current_dateTime = datetime.now()
+            print("recv:")
+            print(current_dateTime)
             # Отправляем видео всем остальным клиентам
             await send_video(video)
-            print("send"+datetime.now())
+            current_dateTime = datetime.now()
+            print("send:")
+            print(current_dateTime)
     finally:
         # Удаляем клиента из списка подключенных при разрыве соединения
         clients.remove(websocket)

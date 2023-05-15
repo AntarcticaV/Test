@@ -30,7 +30,9 @@ async def send_video_to_server():
         # Отправка кадра на сервер
         async with websockets.connect('ws://5.128.148.231:11000') as websocket:
             await websocket.send(video_bytes)
-            print("send"+datetime.now())
+            current_dateTime = datetime.now()
+            print("send:")
+            print(current_dateTime)
 
     # Освобождение ресурсов после завершения
     cap.release()
@@ -43,7 +45,9 @@ async def receive_video_from_server():
         while True:
             # Получение потокового видео от сервера
             video_bytes = await websocket.recv()
-            print("recv"+datetime.now())
+            current_dateTime = datetime.now()
+            print("recv:")
+            print(current_dateTime)
             # Декодирование видео из байтов в кадр
             frame = cv2.imdecode(np.frombuffer(
                 video_bytes, np.uint8), cv2.IMREAD_UNCHANGED)
