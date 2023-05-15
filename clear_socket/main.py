@@ -1,6 +1,7 @@
 import asyncio
 import websockets
 import cv2
+from datetime import datetime
 
 # Словарь для хранения подключенных клиентов
 clients = set()
@@ -23,9 +24,10 @@ async def handle_client(websocket, path):
         while True:
             # Получаем видео от клиента
             video = await websocket.recv()
-
+            print("recv"+datetime.now())
             # Отправляем видео всем остальным клиентам
             await send_video(video)
+            print("send"+datetime.now())
     finally:
         # Удаляем клиента из списка подключенных при разрыве соединения
         clients.remove(websocket)

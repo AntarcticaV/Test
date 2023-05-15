@@ -2,6 +2,7 @@ import asyncio
 import cv2
 import websockets
 import numpy as np
+from datetime import datetime
 
 # Функция для отправки видео с веб-камеры на сервер
 
@@ -27,8 +28,9 @@ async def send_video_to_server():
         video_bytes = jpeg.tobytes()
 
         # Отправка кадра на сервер
-        async with websockets.connect('ws://localhost:8765') as websocket:
+        async with websockets.connect('ws://5.128.148.231:11000') as websocket:
             await websocket.send(video_bytes)
+            print("send"+datetime.now())
 
     # Освобождение ресурсов после завершения
     cap.release()
@@ -37,11 +39,11 @@ async def send_video_to_server():
 
 
 async def receive_video_from_server():
-    async with websockets.connect('ws://localhost:8765') as websocket:
+    async with websockets.connect('ws://5.128.148.231:11000') as websocket:
         while True:
             # Получение потокового видео от сервера
             video_bytes = await websocket.recv()
-
+            print("recv"+datetime.now())
             # Декодирование видео из байтов в кадр
             frame = cv2.imdecode(np.frombuffer(
                 video_bytes, np.uint8), cv2.IMREAD_UNCHANGED)
