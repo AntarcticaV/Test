@@ -4,6 +4,7 @@ import cv2
 import websockets
 import base64
 import pygame
+from datetime import datetime
 
 test = 1
 type_Video = None
@@ -30,6 +31,9 @@ async def send_video(websocket):
         if test == 0:
             break
         await websocket.send(frame_bytes)
+        current_dateTime = datetime.now()
+        print("send:")
+        print(current_dateTime)
     # закрытие видеофайла и WebSocket-соединения
     # cv2.destroyAllWindows()
     cap.release()
@@ -43,6 +47,9 @@ async def receive_video(websocket):
     while True:
         # чтение кадра видео из WebSocket
         frame_bytes = await websocket.recv()
+        current_dateTime = datetime.now()
+        print("recv:")
+        print(current_dateTime)
         frame_arr = np.frombuffer(frame_bytes, dtype='uint8')
         frame = cv2.imdecode(frame_arr, cv2.IMREAD_COLOR)
         # frame.reshape(480, 640, 3)
@@ -70,7 +77,7 @@ async def receive_video(websocket):
 
 async def main():
     # подключение к серверу WebSocket
-    async with websockets.connect("ws://localhost:8000/ws") as websocket:
+    async with websockets.connect("ws://5.128.148.231:11000/ws") as websocket:
         # создание двух тасков для отправки и приема видео
         send_task = asyncio.create_task(send_video(websocket))
         receive_task = asyncio.create_task(receive_video(websocket))

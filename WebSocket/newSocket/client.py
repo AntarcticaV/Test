@@ -7,7 +7,7 @@ from queue import Queue
 import threading
 from datetime import datetime
 
-SERVER_URI = "ws://localhost:8000/ws"
+SERVER_URI = "ws://5.128.148.231:11000/ws"
 
 
 class VideoStreamer:
