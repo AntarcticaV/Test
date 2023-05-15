@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from typing import List
+from datetime import datetime
 
 app = FastAPI()
 
@@ -20,6 +21,9 @@ class ConnectionManager:
         for connection in self.active_connections:
             if connection != sender:
                 await connection.send_text(video_frame)
+                current_dateTime = datetime.now()
+                print("send:")
+                print(current_dateTime)
 
 
 manager = ConnectionManager()
@@ -31,6 +35,9 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
+            current_dateTime = datetime.now()
+            print("recv:")
+            print(current_dateTime)
             await manager.broadcast_video(data, websocket)
     except WebSocketDisconnect:
         manager.disconnect(websocket)

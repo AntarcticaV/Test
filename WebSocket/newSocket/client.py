@@ -5,6 +5,7 @@ import base64
 import numpy as np
 from queue import Queue
 import threading
+from datetime import datetime
 
 SERVER_URI = "ws://localhost:8000/ws"
 
@@ -33,11 +34,17 @@ async def send_video(websocket, queue):
         base64_frame = base64.b64encode(
             encoded_frame.tobytes()).decode('utf-8')
         await websocket.send(base64_frame)
+        current_dateTime = datetime.now()
+        print("send:")
+        print(current_dateTime)
 
 
 async def receive_video(websocket):
     while True:
         base64_frame = await websocket.recv()
+        current_dateTime = datetime.now()
+        print("recv:")
+        print(current_dateTime)
         decoded_frame = base64.b64decode(base64_frame)
         np_frame = np.frombuffer(decoded_frame, dtype=np.uint8)
         frame = cv2.imdecode(np_frame, cv2.IMREAD_COLOR)
