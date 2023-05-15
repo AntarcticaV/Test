@@ -35,16 +35,16 @@ async def send_video(websocket, queue):
             encoded_frame.tobytes()).decode('utf-8')
         await websocket.send(base64_frame)
         current_dateTime = datetime.now()
-        print("send:")
-        print(current_dateTime)
+        with open("otus.txt", "w") as file:
+            file.write(f"send:{current_dateTime}\n")
 
 
 async def receive_video(websocket):
     while True:
         base64_frame = await websocket.recv()
         current_dateTime = datetime.now()
-        print("recv:")
-        print(current_dateTime)
+        with open("otus.txt", "w") as file:
+            file.write(f"recv:{current_dateTime}\n")
         decoded_frame = base64.b64decode(base64_frame)
         np_frame = np.frombuffer(decoded_frame, dtype=np.uint8)
         frame = cv2.imdecode(np_frame, cv2.IMREAD_COLOR)
