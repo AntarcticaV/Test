@@ -23,7 +23,6 @@ stream = audio.open(
 async def send_audio_fragment(fragment, websocket):
     # print(fragment)
     await websocket.send(fragment)
-    stream.write(fragment)
 
 # Функция обратного вызова для воспроизведения полученного аудио фрагмента
 def play_audio_fragment(fragment):
@@ -36,9 +35,9 @@ def play_audio_fragment(fragment):
 async def receive_audio_stream(websocket):
     # Цикл для получения аудио фрагментов от сервера
     try:
-        async for fragment in websocket:
+        fragment = websocket.recv()
             # Воспроизведение полученного аудио фрагмента
-            play_audio_fragment(fragment)
+        stream.write(fragment)
     except websockets.exceptions.ConnectionClosedError:
         print("WebSocket connection closed unexpectedly.")
 
