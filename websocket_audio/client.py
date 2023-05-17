@@ -21,8 +21,9 @@ stream = audio.open(
 
 # Функция обратного вызова для отправки аудио фрагмента через WebSocket
 async def send_audio_fragment(fragment, websocket):
-    print(fragment)
+    # print(fragment)
     await websocket.send(fragment)
+    stream.write(fragment)
 
 # Функция обратного вызова для воспроизведения полученного аудио фрагмента
 def play_audio_fragment(fragment):
@@ -49,10 +50,10 @@ async def capture_and_send_audio(websocket):
     
 
     # Отправка аудио фрагментов в цикле
-    # while True:
+    while True:
         # Чтение аудио фрагмента с микрофона
-    fragment = stream.read(frames_per_buffer)
-    await send_audio_fragment(fragment, websocket)
+        fragment = stream.read(frames_per_buffer)
+        await send_audio_fragment(fragment, websocket)
 
 async def connect_and_receive_audio_stream():
     async with websockets.connect(server_url) as websocket:
