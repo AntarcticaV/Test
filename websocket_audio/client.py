@@ -4,7 +4,7 @@ import sounddevice as sd
 import soundfile as sf
 
 # WebSocket URL сервера
-server_url = "ws://localhost:8000/ws"
+server_url = "ws://5.128.148.231:11000/ws"
 
 # Параметры захвата и воспроизведения аудио
 sample_rate = 44100
