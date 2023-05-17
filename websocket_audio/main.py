@@ -1,77 +1,31 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
 import asyncio
+import websockets
+from fastapi import FastAPI
+from starlette.websockets import WebSocket
 
-# Список активных подключений
-connections = set()
-
-# Создаем экземпляр FastAPI
 app = FastAPI()
-
-# HTML-страница с формой для тестирования
-html = """
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Audio Streaming Server</title>
-    </head>
-    <body>
-        <h1>Audio Streaming Server</h1>
-        <form action="" onsubmit="sendMessage(event)">
-            <input type="text" id="messageText" autocomplete="off" placeholder="Enter message" required>
-            <button type="submit">Send</button>
-        </form>
-        <script>
-            var socket = new WebSocket("ws://localhost:8000/ws");
-
-            function sendMessage(event) {
-                event.preventDefault();
-                var messageInput = document.getElementById("messageText");
-                var message = messageInput.value;
-                socket.send(message);
-                messageInput.value = '';
-            }
-        </script>
-    </body>
-</html>
-"""
-
-# WebSocket обработчик
-
-
-async def websocket_handler(websocket: WebSocket):
-    await websocket.accept()
-
-    # Добавляем новое подключение в список активных подключений
-    connections.add(websocket)
-
-    try:
-        while True:
-            message = await websocket.receive_text()
-
-            # Отправляем сообщение всем подключенным пользователям, кроме отправителя
-            for connection in connections:
-                if connection != websocket:
-                    await connection.send_text(message)
-    except WebSocketDisconnect:
-        # Удаляем закрытое подключение из списка активных подключений
-        connections.remove(websocket)
-
-# Маршрут для WebSocket соединения
+connected_clients = set()
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket_handler(websocket)
+async def audio_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    connected_clients.add(websocket)
 
-# Маршрут для HTML-страницы
+    try:
+        while True:
+            data = await websocket.receive_bytes()
+            await broadcast(data, websocket)
+
+    except websockets.exceptions.ConnectionClosedError:
+        connected_clients.remove(websocket)
 
 
-@app.get("/")
-async def get():
-    return HTMLResponse(html)
+async def broadcast(data: bytes, sender: WebSocket):
+    for client in connected_clients:
+        if client != sender:
+            await client.send_bytes(data)
 
-# Запуск сервера
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
