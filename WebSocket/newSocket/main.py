@@ -10,7 +10,6 @@ class ConnectionManager:
         self.active_connections = []
 
     async def connect(self, websocket: WebSocket):
-        print("fggf")
         await websocket.accept()
         self.active_connections.append(websocket)
 

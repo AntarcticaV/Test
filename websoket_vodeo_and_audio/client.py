@@ -1,138 +1,125 @@
+import asyncio
 import cv2
 import numpy as np
-import pyaudio
-import asyncio
 import websockets
-import threading
+import pyaudio
+import wave
 
-# Параметры видео и аудио
-VIDEO_WIDTH = 640
-VIDEO_HEIGHT = 480
-VIDEO_FPS = 30
-VIDEO_CODEC = cv2.VideoWriter_fourcc(*'XVID')
-AUDIO_CHANNELS = 1
-AUDIO_SAMPLE_RATE = 44100
-AUDIO_CHUNK_SIZE = 1024
+# Установка параметров видео и аудио
+FRAME_WIDTH = 640
+FRAME_HEIGHT = 480
+SAMPLE_RATE = 44100
+CHUNK_SIZE = 1024
+FORMAT = pyaudio.paInt16
+CHANNELS = 1
 
-# Конфигурация клиента
-SERVER_URL = 'ws://localhost:8765'
+# Функция для чтения видео с веб-камеры и отправки на сервер
 
-# Открытие видео-захвата с помощью OpenCV
-video_capture = cv2.VideoCapture(0)
-video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, VIDEO_WIDTH)
-video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, VIDEO_HEIGHT)
-video_capture.set(cv2.CAP_PROP_FPS, VIDEO_FPS)
 
-# Инициализация аудиозахвата
-audio_stream = pyaudio.PyAudio().open(
-    format=pyaudio.paInt16,
-    channels=AUDIO_CHANNELS,
-    rate=AUDIO_SAMPLE_RATE,
-    input=True,
-    frames_per_buffer=AUDIO_CHUNK_SIZE
-)
+async def send_video(stream):
+    # Создание объекта видео-захвата
+    cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
-# Функция для чтения и отправки видео с веб-камеры
-def send_video():
-    # Создание видеопотока для записи видео
-    video_writer = cv2.VideoWriter('video_stream.avi', VIDEO_CODEC, VIDEO_FPS, (VIDEO_WIDTH, VIDEO_HEIGHT))
-
-    # Цикл для чтения и отправки кадров видео
+    # Цикл чтения и отправки кадров видео
     while True:
         # Чтение кадра с веб-камеры
-        ret, frame = video_capture.read()
-
-        # Запись кадра в видеопоток
-        video_writer.write(frame)
+        ret, frame = cap.read()
 
         # Кодирование кадра в формат JPEG
         ret, jpeg = cv2.imencode('.jpg', frame)
-
-        # Преобразование кадра в байты для отправки
         video_bytes = jpeg.tobytes()
 
         # Отправка кадра на сервер
-        asyncio.run(send_video_to_server(video_bytes))
+        await stream.send(video_bytes)
 
-    # Освобождение ресурсов после завершения
-    video_writer.release()
+    # Освобождение ресурсов
+    cap.release()
 
-# Функция для отправки видео на сервер
-async def send_video_to_server(video_bytes):
-    async with websockets.connect(SERVER_URL) as websocket:
-        await websocket.send(video_bytes)
+# Функция для чтения аудио с микрофона и отправки на сервер
 
-# Функция для отправки аудио на сервер
-async def send_audio_to_server(audio_data):
-    async with websockets.connect(SERVER_URL) as websocket:
-        await websocket.send(audio_data)
 
-# Функция для получения потокового видео и аудио с сервера
-async def receive_stream_from_server():
-    async with websockets.connect(SERVER_URL) as websocket:
-        while True:
-            # Получение потокового видео и аудио от сервера
-            stream_data = await websocket.recv()
+async def send_audio(stream):
+    # Создание объекта аудио-захвата
+    audio = pyaudio.PyAudio()
+    stream = audio.open(format=FORMAT, channels=CHANNELS,
+                        rate=SAMPLE_RATE, input=True, frames_per_buffer=CHUNK_SIZE)
 
-            # Обработка полученных данных
-            if stream_data.startswith('video'):
-                # Получение видео из потока данных
-                video_data = stream_data[6:]
+    # Цикл чтения и отправки аудио
+    while True:
+        # Чтение аудио-фрейма
+        audio_data = stream.read(CHUNK_SIZE)
 
-                # Декодирование видео из байтов в кадр
-                frame = cv2.imdecode(np.frombuffer(video_data, np.uint8), cv2.IMREAD_UNCHANGED)
+        # Отправка аудио-фрейма на сервер
+        await stream.send(audio_data)
 
-                # Отображение видео в окне
-                cv2.imshow('Received Video', frame)
-                cv2.waitKey(1)
-            elif stream_data.startswith('audio'):
-                # Получение аудио из потока данных
-                audio_data = stream_data[6:]
+    # Остановка аудио-захвата
+    stream.stop_stream()
+    stream.close()
+    audio.terminate()
 
-                # Воспроизведение аудио
-                audio_stream.write(audio_data)
+# Функция для приема видео и аудио от сервера и вывода на экран
 
-# Функция для отправки видео и аудио на сервер
-async def send_stream():
-    async with websockets.connect(SERVER_URL) as websocket:
-        while True:
-            # Чтение кадра с веб-камеры
-            ret, frame = video_capture.read()
 
-            # Кодирование кадра в формат JPEG
-            ret, jpeg = cv2.imencode('.jpg', frame)
+async def receive_video_and_audio(stream):
+    # Создание окна для отображения видео
+    cv2.namedWindow('Received Video', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('Received Video', FRAME_WIDTH, FRAME_HEIGHT)
 
-            # Преобразование кадра в байты для отправки
-            video_bytes = jpeg.tobytes()
+    # Цикл приема и отображения видео и аудио
+    while True:
+        # Получение данных от сервера
+        data = await stream.recv()
 
-            # Отправка видео на сервер
-            await websocket.send(f'video{video_bytes}')
+        # Проверка типа данных
+        if isinstance(data, bytes):
+            # Декодирование видео-кадра из байтов в изображение
+            frame = cv2.imdecode(np.frombuffer(
+                data, np.uint8), cv2.IMREAD_COLOR)
 
-            # Чтение аудио-данных
-            audio_data = audio_stream.read(AUDIO_CHUNK_SIZE)
+            # Отображение видео-кадра
+            cv2.imshow('Received Video', frame)
+            cv2.waitKey(1)
+        elif isinstance(data, str):
+            # Воспроизведение аудио-данных
+            audio_data = np.frombuffer(data, dtype=np.int16)
+            play_audio(audio_data)
 
-            # Отправка аудио на сервер
-            await websocket.send(f'audio{audio_data}')
+# Функция для воспроизведения аудио
+
+
+def play_audio(audio_data):
+    # Создание объекта воспроизведения аудио
+    audio = pyaudio.PyAudio()
+    stream = audio.open(format=FORMAT, channels=CHANNELS,
+                        rate=SAMPLE_RATE, output=True)
+
+    # Воспроизведение аудио-данных
+    stream.write(audio_data.tobytes())
+
+    # Остановка воспроизведения
+    stream.stop_stream()
+    stream.close()
+    audio.terminate()
+
+# Функция для запуска клиентского приложения
+
+
+async def run_client():
+    # Подключение к серверу
+    async with websockets.connect('ws://5.128.148.231:11000') as websocket:
+        # Отправка видео и аудио на сервер
+        video_task = asyncio.create_task(send_video(websocket))
+        audio_task = asyncio.create_task(send_audio(websocket))
+
+        # Прием и обработка видео и аудио от сервера
+        await receive_video_and_audio(websocket)
+
+        # Ожидание завершения задач отправки видео и аудио
+        await video_task
+        await audio_task
 
 # Запуск клиентского приложения
-if __name__ == '__main__':
-    # Запуск потоков для отправки и получения потокового видео и аудио
-    send_thread = threading.Thread(target=asyncio.run, args=(send_stream(),))
-    receive_thread = threading.Thread(target=asyncio.run, args=(receive_stream_from_server(),))
-    send_thread.start()
-    receive_thread.start()
-
-    # Отображение видео с локальной камеры
-    while True:
-        ret, frame = video_capture.read()
-        cv2.imshow('Local Video', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    # Освобождение ресурсов после завершения
-    video_capture.release()
-    audio_stream.stop_stream()
-    audio_stream.close()
-    pyaudio.PyAudio().terminate()
-    cv2.destroyAllWindows()
-
+if __name__ == "__main__":
+    asyncio.run(run_client())
