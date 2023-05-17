@@ -8,23 +8,27 @@ server_url = "ws://5.128.148.231:11000/ws"
 # Параметры захвата и воспроизведения аудио
 sample_rate = 44100
 frames_per_buffer = 1024
-input_channels = 1
-output_channels = 2
+channels = 2
+audio = pyaudio.PyAudio()
+stream = audio.open(
+        format=pyaudio.paInt16,
+        channels=channels,
+        rate=sample_rate,
+        input=True,
+        output=True,
+        frames_per_buffer=frames_per_buffer
+    )
 
 # Функция обратного вызова для отправки аудио фрагмента через WebSocket
 async def send_audio_fragment(fragment, websocket):
+    print(fragment)
     await websocket.send(fragment)
 
 # Функция обратного вызова для воспроизведения полученного аудио фрагмента
 def play_audio_fragment(fragment):
     # Воспроизводим аудио фрагмент с помощью PyAudio
-    audio = pyaudio.PyAudio()
-    stream = audio.open(
-        format=pyaudio.paInt16,
-        channels=output_channels,
-        rate=sample_rate,
-        output=True
-    )
+    
+    
     stream.write(fragment)
     stream.close()
 
@@ -39,22 +43,16 @@ async def receive_audio_stream(websocket):
 
 async def capture_and_send_audio(websocket):
     # Инициализация PyAudio
-    audio = pyaudio.PyAudio()
+
 
     # Захват аудио с микрофона
-    stream = audio.open(
-        format=pyaudio.paInt16,
-        channels=input_channels,
-        rate=sample_rate,
-        input=True,
-        frames_per_buffer=frames_per_buffer
-    )
+    
 
     # Отправка аудио фрагментов в цикле
-    while True:
+    # while True:
         # Чтение аудио фрагмента с микрофона
-        fragment = stream.read(frames_per_buffer)
-        await send_audio_fragment(fragment, websocket)
+    fragment = stream.read(frames_per_buffer)
+    await send_audio_fragment(fragment, websocket)
 
 async def connect_and_receive_audio_stream():
     async with websockets.connect(server_url) as websocket:

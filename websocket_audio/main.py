@@ -15,6 +15,7 @@ async def audio_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_bytes()
+            print(data)
             await broadcast(data, websocket)
 
     except websockets.exceptions.ConnectionClosedError:
